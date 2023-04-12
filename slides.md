@@ -23,3 +23,9 @@ kernelspec:
 # What?
 
 # How?
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+# Why FLOSS?
+
+# Why Python?
