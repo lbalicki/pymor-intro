@@ -21,7 +21,9 @@ language_info:
   pygments_lexer: ipython3
   version: 3.8.12
 rise:
-  theme: serif
+  footer: "<h3>Petar Mlinari\u0107</h3>"
+  header: <h1>pyMOR</h1>
+  scroll: true
 ---
 
 +++ {"slideshow": {"slide_type": "slide"}}
