@@ -20,6 +20,8 @@ language_info:
   nbconvert_exporter: python
   pygments_lexer: ipython3
   version: 3.8.12
+rise:
+  theme: serif
 ---
 
 +++ {"slideshow": {"slide_type": "slide"}}
