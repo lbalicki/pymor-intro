@@ -32,14 +32,16 @@ rise:
 
 +++ {"slideshow": {"slide_type": "subslide"}}
 
-# Why?
+## Why?
 
-# What?
+## What?
 
-# How?
+## How?
 
 +++ {"slideshow": {"slide_type": "subslide"}}
 
-# Why FLOSS?
+## Why FLOSS?
 
-# Why Python?
++++ {"slideshow": {"slide_type": "fragment"}}
+
+## Why Python?
