@@ -1,5 +1,3 @@
 pymor==2022.2.1
-ipython
-notebook
 jupytext
 rise
