@@ -22,8 +22,8 @@ language_info:
   pygments_lexer: ipython3
   version: 3.8.12
 rise:
-  footer: "<h3>Petar Mlinari\u0107</h3>"
-  header: <h1>pyMOR</h1>
+  header: <img class="pymor-logo" src="logo/pymor_logo.png" alt="pyMOR logo" width=12%
+    />
   scroll: true
 ---
 
