@@ -1,4 +1,5 @@
 ---
+celltoolbar: Slideshow
 jupytext:
   formats: ipynb,md:myst
   text_representation:
