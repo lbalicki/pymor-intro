@@ -20,7 +20,7 @@ language_info:
   name: python
   nbconvert_exporter: python
   pygments_lexer: ipython3
-  version: 3.8.12
+  version: 3.8.13
 rise:
   header: <img class="pymor-logo" src="logo/pymor_logo.png" alt="pyMOR logo" width=12%
     />
@@ -39,10 +39,29 @@ rise:
 
 ## How?
 
++++ {"slideshow": {"slide_type": "slide"}}
+
+# Why?
+
 +++ {"slideshow": {"slide_type": "subslide"}}
 
 ## Why FLOSS?
 
 +++ {"slideshow": {"slide_type": "fragment"}}
 
+1. Why use FLOSS?
+1. Why publish FLOSS?
+1. Why contribute to a FLOSS project?
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
 ## Why Python?
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+## Why pyMOR?
+
++++ {"slideshow": {"slide_type": "fragment"}}
+
+1. Why should I use pyMOR?
+1. Why was pyMOR created?
