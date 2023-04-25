@@ -1,3 +1,4 @@
-pymor==2022.2.1
 jupytext
+matplotlib
+pymor==2022.2.1
 rise
