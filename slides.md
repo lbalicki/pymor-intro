@@ -63,5 +63,31 @@ rise:
 
 +++ {"slideshow": {"slide_type": "fragment"}}
 
-1. Why should I use pyMOR?
 1. Why was pyMOR created?
+
++++ {"slideshow": {"slide_type": "fragment"}}
+
+<table width=70%>
+    <tr>
+        <td><img src="figs/renefritze.jpg"></td>
+        <td><img src="figs/sdrave.jpg"></td>
+        <td><img src="figs/ftschindler.jpg"></td>
+    </tr>
+    <tr>
+        <td>René Fritze</td>
+        <td>Stephan Rave</td>
+        <td>Felix Schindler</td>
+    </tr>
+</table>
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+<center><img src="figs/multibat_project.jpg" width=50%></center>
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+<center><img src="figs/multibat_interfaces.jpg" width=60%></center>
+
++++ {"slideshow": {"slide_type": "fragment"}}
+
+2. Why should I use pyMOR?
