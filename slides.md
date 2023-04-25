@@ -20,7 +20,7 @@ language_info:
   name: python
   nbconvert_exporter: python
   pygments_lexer: ipython3
-  version: 3.8.12
+  version: 3.8.13
 rise:
   header: <img class="pymor-logo" src="logo/pymor_logo.png" alt="pyMOR logo" width=12%
     />
@@ -234,6 +234,8 @@ set_log_levels({
 +++ {"slideshow": {"slide_type": "subslide"}}
 
 ### Loading from Files
+
+Rail model from [MOR Wiki](https://morwiki.mpi-magdeburg.mpg.de/morwiki/index.php/Steel_Profile).
 
 ```{code-cell} ipython3
 ---
@@ -545,6 +547,17 @@ rail_err_irka.h2_norm() / rail_fom.h2_norm()
 
 ## Transfer Function
 
++++ {"slideshow": {"slide_type": "fragment"}}
+
+Heat equation over a semi-infinite rod from \[Beattie/Gugercin '12\].
+
+$$
+\begin{align*}
+  H(s) & = e^{-\sqrt{s}} \\
+  H'(s) & = -\frac{e^{-\sqrt{s}}}{2 \sqrt{s}}
+\end{align*}
+$$
+
 ```{code-cell} ipython3
 ---
 slideshow:
@@ -738,4 +751,70 @@ fig, ax = plt.subplots()
 _ = tf_err.mag_plot(w_tf, ax=ax, label='TF-IRKA')
 _ = aaa_err.mag_plot(w_tf, ax=ax, label='AAA')
 _ = ax.legend()
+```
+
++++ {"slideshow": {"slide_type": "slide"}}
+
+## Parametric LTI Models
+
++++ {"slideshow": {"slide_type": "fragment"}}
+
+Cookie model (thermal block) example from [MOR Wiki](https://morwiki.mpi-magdeburg.mpg.de/morwiki/index.php/Thermal_Block).
+
+```{code-cell} ipython3
+import scipy.io as spio
+
+mat = spio.loadmat('data/cookie/ABCE.mat')
+```
+
+```{code-cell} ipython3
+mat.keys()
+```
+
+```{code-cell} ipython3
+A0 = mat['A0']
+A1 = 0.2 * mat['A1'] + 0.4 * mat['A2'] + 0.6 * mat['A3'] + 0.8 * mat['A4']
+B = mat['B']
+C = mat['C']
+E = mat['E']
+```
+
+```{code-cell} ipython3
+A0
+```
+
+```{code-cell} ipython3
+from pymor.operators.numpy import NumpyMatrixOperator
+
+A0op = NumpyMatrixOperator(A0)
+A1op = NumpyMatrixOperator(A1)
+Bop = NumpyMatrixOperator(B)
+Cop = NumpyMatrixOperator(C)
+Eop = NumpyMatrixOperator(E)
+```
+
+```{code-cell} ipython3
+A0op
+```
+
+```{code-cell} ipython3
+from pymor.parameters.functionals import ProjectionParameterFunctional
+
+Aop = A0op + ProjectionParameterFunctional('p') * A1op
+```
+
+```{code-cell} ipython3
+Aop
+```
+
+```{code-cell} ipython3
+cookie_fom = LTIModel(Aop, Bop, Cop, E=Eop)
+```
+
+```{code-cell} ipython3
+cookie_fom
+```
+
+```{code-cell} ipython3
+cookie_fom.parameters
 ```
