@@ -215,7 +215,9 @@ slideshow:
   slide_type: '-'
 ---
 import numpy as np
+import scipy.linalg as spla
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from pymor.core.logger import set_log_levels
 ```
 
@@ -762,16 +764,28 @@ _ = ax.legend()
 Cookie model (thermal block) example from [MOR Wiki](https://morwiki.mpi-magdeburg.mpg.de/morwiki/index.php/Thermal_Block).
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 import scipy.io as spio
 
 mat = spio.loadmat('data/cookie/ABCE.mat')
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 mat.keys()
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 A0 = mat['A0']
 A1 = 0.2 * mat['A1'] + 0.4 * mat['A2'] + 0.6 * mat['A3'] + 0.8 * mat['A4']
 B = mat['B']
@@ -780,10 +794,18 @@ E = mat['E']
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 A0
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 from pymor.operators.numpy import NumpyMatrixOperator
 
 A0op = NumpyMatrixOperator(A0)
@@ -794,27 +816,266 @@ Eop = NumpyMatrixOperator(E)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 A0op
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 from pymor.parameters.functionals import ProjectionParameterFunctional
 
 Aop = A0op + ProjectionParameterFunctional('p') * A1op
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 Aop
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 cookie_fom = LTIModel(Aop, Bop, Cop, E=Eop)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 cookie_fom
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 cookie_fom.parameters
+```
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+## Magnitude Plot
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: '-'
+---
+num_w = 10
+num_p = 10
+ws = np.logspace(-4, 4, num_w)
+ps = np.logspace(-6, 2, num_p)
+Hwp = np.empty((num_p, num_w))
+for i in range(num_p):
+    Hwp[i] = spla.norm(cookie_fom.transfer_function.freq_resp(ws, mu=ps[i]), axis=(1, 2))
+```
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
+fig, ax = plt.subplots()
+out = ax.pcolormesh(ws, ps, Hwp, shading='gouraud', norm=LogNorm())
+ax.set(
+    xscale='log',
+    yscale='log',
+    xlabel=r'Frequency $\omega$ (rad/s)',
+    ylabel='Parameter $p$',
+    title=r'$\Vert H(i \omega, p) \Vert$',
+)
+ax.grid(False)
+_ = fig.colorbar(out)
+```
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Interpolation
+
+```{code-cell} ipython3
+from pymor.algorithms.gram_schmidt import gram_schmidt
+from pymor.reductors.interpolation import LTIBHIReductor
+
+s_samples = np.logspace(-1, 1, 5)
+s_samples = np.concatenate((1j * s_samples, -1j * s_samples))
+p_samples = np.logspace(-3, -1, 5)
+V = cookie_fom.A.source.empty()
+W = cookie_fom.A.source.empty()
+for p in p_samples:
+    interp = LTIBHIReductor(cookie_fom, mu=p)
+    interp.reduce(s_samples, np.ones((len(s_samples), 1)), np.ones((len(s_samples), 4)))
+    V.append(interp.V)
+    W.append(interp.W)
+
+_ = gram_schmidt(V, copy=False)
+_ = gram_schmidt(W, copy=False)
+```
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
+V
+```
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
+from pymor.reductors.basic import LTIPGReductor
+
+pg = LTIPGReductor(cookie_fom, W, V)
+cookie_rom = pg.reduce()
+```
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
+cookie_rom
+```
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Error System
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: '-'
+---
+cookie_err = cookie_fom - cookie_rom
+```
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
+Hwp_err = np.empty((num_p, num_w))
+for i in range(num_p):
+    Hwp_err[i] = spla.norm(cookie_err.transfer_function.freq_resp(ws, mu=ps[i]), axis=(1, 2))
+```
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
+fig, ax = plt.subplots()
+out = ax.pcolormesh(ws, ps, Hwp_err, shading='gouraud', norm=LogNorm())
+ax.set(
+    xscale='log',
+    yscale='log',
+    xlabel=r'Frequency $\omega$ (rad/s)',
+    ylabel='Parameter $p$',
+    title=r'$\Vert H(i \omega, p) - H_r(i \omega, p) \Vert$',
+)
+ax.grid(False)
+_ = fig.colorbar(out)
+```
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### ROM Poles
+
+```{code-cell} ipython3
+for p in ps:
+    poles = cookie_rom.poles(mu=p)
+    print(poles.real.max())
+```
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Galerkin Projection
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: '-'
+---
+from pymor.algorithms.pod import pod
+
+VW = V.copy()
+VW.append(W)
+VW, svals = pod(VW, modes=50)
+```
+
+```{code-cell} ipython3
+VW
+```
+
+```{code-cell} ipython3
+galerkin = LTIPGReductor(cookie_fom, VW, VW)
+cookie_rom_g = galerkin.reduce()
+```
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Error System 2
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: '-'
+---
+cookie_err2 = cookie_fom - cookie_rom_g
+```
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
+Hwp_err2 = np.empty((num_p, num_w))
+for i in range(num_p):
+    Hwp_err2[i] = spla.norm(cookie_err2.transfer_function.freq_resp(ws, mu=ps[i]), axis=(1, 2))
+```
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
+fig, ax = plt.subplots()
+out = ax.pcolormesh(ws, ps, Hwp_err2, shading='gouraud', norm=LogNorm())
+ax.set(
+    xscale='log',
+    yscale='log',
+    xlabel=r'Frequency $\omega$ (rad/s)',
+    ylabel='Parameter $p$',
+    title=r'$\Vert H(i \omega, p) - H_r(i \omega, p) \Vert$',
+)
+ax.grid(False)
+_ = fig.colorbar(out)
+```
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### ROM Poles 2
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: '-'
+---
+for p in ps:
+    poles = cookie_rom_g.poles(mu=p)
+    print(poles.real.max())
 ```
