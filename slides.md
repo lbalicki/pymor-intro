@@ -1090,29 +1090,35 @@ Nonlinear RC example from [MOR Wiki](https://morwiki.mpi-magdeburg.mpg.de/morwik
 
 $$
 \begin{align*}
-  \dot{x}(t) & = A x(t) - g(A_0 x(t)) + g(A_1 x(t)) - g(A_2 x(t)) + B u(t) \\
+  \dot{x}(t) & = -g(A_0 x(t)) + g(A_1 x(t)) - g(A_2 x(t)) + B u(t) \\
   y(t) & = C x(t)
 \end{align*}
 $$
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 import scipy.sparse as sps
 from pymor.models.basic import InstationaryModel
 ```
 
 ```{code-cell} ipython3
-n = 100
-A_rc = sps.diags([(n - 1) * [1], n * [-2], (n - 1) * [1]], [-1, 0, 1], format='csc')
-B_rc = np.zeros((n, 1))
-B_rc[0, 0] = 1
-C_rc = B_rc.T
+---
+slideshow:
+  slide_type: fragment
+---
+InstationaryModel?
 ```
 
 ```{code-cell} ipython3
-A_rc.toarray()
-```
+---
+slideshow:
+  slide_type: subslide
+---
+n = 1000
 
-```{code-cell} ipython3
 A0_rc = sps.lil_matrix((n, n))
 A0_rc[0, 0] = 1
 A0_rc = A0_rc.tocsc()
@@ -1124,22 +1130,16 @@ A1_rc = A1_rc.tocsc()
 A2_rc = sps.diags([n * [1], (n - 1) * [-1]], [0, 1], format='lil')
 A2_rc[-1, -1] = 0
 A2_rc = A2_rc.tocsc()
+
+B_rc = np.zeros((n, 1))
+B_rc[0, 0] = 1
+
+C_rc = B_rc.T
 ```
 
 ```{code-cell} ipython3
-A0_rc.toarray()
-```
-
-```{code-cell} ipython3
-A1_rc.toarray()
-```
-
-```{code-cell} ipython3
-A2_rc.toarray()
-```
-
-```{code-cell} ipython3
-g = lambda x: np.exp(40 * x) - 1
+g = lambda x: np.exp(40 * x) + x - 1
+g_der = lambda x: 40 * np.exp(40 * x) + 1
 ```
 
 ```{code-cell} ipython3
@@ -1147,7 +1147,7 @@ from pymor.operators.interface import Operator
 from pymor.vectorarrays.numpy import NumpyVectorSpace
 
 class ComponentwiseOperator(Operator):
-    def __init__(self, mapping, dim_source=1, dim_range=1, linear=False,
+    def __init__(self, mapping, mapping_der=None, dim_source=1, dim_range=1, linear=False,
                  source_id=None, range_id=None, solver_options=None, name=None):
         self.__auto_init(locals())
         self.source = NumpyVectorSpace(dim_source, source_id)
@@ -1160,15 +1160,27 @@ class ComponentwiseOperator(Operator):
 
     def restricted(self, dofs):
         return self.with_(dim_source=len(dofs), dim_range=len(dofs)), dofs
+
+    def jacobian(self, U, mu=None):
+        if self.mapping_der is None:
+            raise NotImplementedError
+        return NumpyMatrixOperator(np.diag(self.mapping_der(U.to_numpy()[0])),
+                                   source_id=self.source_id,
+                                   range_id=self.range_id)
+
+class SparseMatrixOperator(NumpyMatrixOperator):
+    def restricted(self, dofs):
+        matrix_restricted = self.matrix[dofs, :]
+        dofs_restricted = matrix_restricted.tocoo().col
+        matrix_restricted = matrix_restricted[:, dofs_restricted]
+        return SparseMatrixOperator(matrix_restricted), dofs_restricted
 ```
 
 ```{code-cell} ipython3
-g_op = ComponentwiseOperator(g, dim_source=n, dim_range=n)
-
-A_rc_op = NumpyMatrixOperator(A_rc)
-A0_rc_op = NumpyMatrixOperator(A0_rc)
-A1_rc_op = NumpyMatrixOperator(A1_rc)
-A2_rc_op = NumpyMatrixOperator(A2_rc)
+g_op = ComponentwiseOperator(g, g_der, dim_source=n, dim_range=n)
+A0_rc_op = SparseMatrixOperator(A0_rc)
+A1_rc_op = SparseMatrixOperator(A1_rc)
+A2_rc_op = SparseMatrixOperator(A2_rc)
 B_rc_op = NumpyMatrixOperator(B_rc)
 C_rc_op = NumpyMatrixOperator(C_rc)
 ```
@@ -1180,14 +1192,14 @@ from pymor.algorithms.timestepping import ExplicitEulerTimeStepper
 
 ```{code-cell} ipython3
 T = 1
-x0 = A_rc_op.source.zeros(1)
-operator = -A_rc_op + g_op @ A0_rc_op - g_op @ A1_rc_op + g_op @ A2_rc_op
+x0 = A0_rc_op.source.zeros(1)
+operator = g_op @ A0_rc_op - g_op @ A1_rc_op + g_op @ A2_rc_op
 rhs = LinearInputOperator(B_rc_op)
-```
+nt = 500
+time_stepper = ExplicitEulerTimeStepper(nt)
 
-```{code-cell} ipython3
 rc_fom = InstationaryModel(T, x0, operator, rhs,
-                           time_stepper=ExplicitEulerTimeStepper(100),
+                           time_stepper=time_stepper,
                            output_functional=C_rc_op)
 ```
 
@@ -1196,7 +1208,7 @@ rc_output = rc_fom.output(input=1)
 ```
 
 ```{code-cell} ipython3
-_ = plt.plot(np.linspace(0, T, 101), rc_output)
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_output)
 ```
 
 ```{code-cell} ipython3
@@ -1208,7 +1220,7 @@ pod_vec, pod_val = pod(X_rc)
 ```
 
 ```{code-cell} ipython3
-_ = plt.semilogy(pod_val, '.-')
+_ = plt.semilogy(range(1, len(pod_val) + 1), pod_val, '.-')
 ```
 
 ```{code-cell} ipython3
@@ -1218,4 +1230,123 @@ from pymor.reductors.basic import InstationaryRBReductor
 ```{code-cell} ipython3
 rb = InstationaryRBReductor(rc_fom, pod_vec)
 rc_rom = rb.reduce()
+```
+
+```{code-cell} ipython3
+rc_rom_output = rc_rom.output(input=1)
+```
+
+```{code-cell} ipython3
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_output)
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_rom_output)
+```
+
+```{code-cell} ipython3
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_output - rc_rom_output)
+```
+
+```{code-cell} ipython3
+test_input = 'sin(100 * t * t)'
+rc_output2 = rc_fom.output(input=test_input)
+rc_rom_output2 = rc_rom.output(input=test_input)
+```
+
+```{code-cell} ipython3
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_output2)
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_rom_output2)
+```
+
+```{code-cell} ipython3
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_output2 - rc_rom_output2)
+```
+
+```{code-cell} ipython3
+from pymor.algorithms.ei import deim
+```
+
+```{code-cell} ipython3
+rc_sol = rc_fom.solve(input=1)
+```
+
+```{code-cell} ipython3
+rc_sol
+```
+
+```{code-cell} ipython3
+f_sol = rc_fom.operator.apply(rc_sol)
+```
+
+```{code-cell} ipython3
+f_sol
+```
+
+```{code-cell} ipython3
+interpolation_dofs, collateral_basis, deim_data = deim(f_sol)
+```
+
+```{code-cell} ipython3
+interpolation_dofs
+```
+
+```{code-cell} ipython3
+sorted(interpolation_dofs)
+```
+
+```{code-cell} ipython3
+collateral_basis
+```
+
+```{code-cell} ipython3
+deim_data
+```
+
+```{code-cell} ipython3
+from pymor.operators.ei import EmpiricalInterpolatedOperator
+```
+
+```{code-cell} ipython3
+rc_fom.operator
+```
+
+```{code-cell} ipython3
+ei_ops = [EmpiricalInterpolatedOperator(op, interpolation_dofs, collateral_basis, True)
+          for op in rc_fom.operator.operators]
+```
+
+```{code-cell} ipython3
+from pymor.operators.constructions import LincombOperator
+```
+
+```{code-cell} ipython3
+operator_new = LincombOperator(ei_ops, rc_fom.operator.coefficients)
+```
+
+```{code-cell} ipython3
+rc_fom_ei = rc_fom.with_(operator=operator_new)
+```
+
+```{code-cell} ipython3
+rc_fom_ei
+```
+
+```{code-cell} ipython3
+rb_ei = InstationaryRBReductor(rc_fom_ei, pod_vec)
+rc_rom_ei = rb_ei.reduce()
+```
+
+```{code-cell} ipython3
+rc_rom_ei
+```
+
+```{code-cell} ipython3
+rc_rom_ei_output2 = rc_rom_ei.output(input=test_input)
+```
+
+```{code-cell} ipython3
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_output2)
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_rom_ei_output2)
+```
+
+```{code-cell} ipython3
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_output2 - rc_rom_ei_output2)
 ```
