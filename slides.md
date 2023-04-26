@@ -199,7 +199,7 @@ rise:
 
 +++ {"slideshow": {"slide_type": "slide"}}
 
-w# How?
+# How?
 
 +++ {"slideshow": {"slide_type": "subslide"}}
 
@@ -1112,10 +1112,14 @@ slideshow:
 InstationaryModel?
 ```
 
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Building an `InstationaryModel`
+
 ```{code-cell} ipython3
 ---
 slideshow:
-  slide_type: subslide
+  slide_type: '-'
 ---
 n = 1000
 
@@ -1138,11 +1142,19 @@ C_rc = B_rc.T
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 g = lambda x: np.exp(40 * x) + x - 1
 g_der = lambda x: 40 * np.exp(40 * x) + 1
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 from pymor.operators.interface import Operator
 from pymor.vectorarrays.numpy import NumpyVectorSpace
 
@@ -1164,7 +1176,7 @@ class ComponentwiseOperator(Operator):
     def jacobian(self, U, mu=None):
         if self.mapping_der is None:
             raise NotImplementedError
-        return NumpyMatrixOperator(np.diag(self.mapping_der(U.to_numpy()[0])),
+        return NumpyMatrixOperator(sps.diags(self.mapping_der(U.to_numpy()[0])),
                                    source_id=self.source_id,
                                    range_id=self.range_id)
 
@@ -1177,6 +1189,10 @@ class SparseMatrixOperator(NumpyMatrixOperator):
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 g_op = ComponentwiseOperator(g, g_der, dim_source=n, dim_range=n)
 A0_rc_op = SparseMatrixOperator(A0_rc)
 A1_rc_op = SparseMatrixOperator(A1_rc)
@@ -1186,11 +1202,19 @@ C_rc_op = NumpyMatrixOperator(C_rc)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 from pymor.operators.constructions import LinearInputOperator
 from pymor.algorithms.timestepping import ExplicitEulerTimeStepper
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 T = 1
 x0 = A0_rc_op.source.zeros(1)
 operator = g_op @ A0_rc_op - g_op @ A1_rc_op + g_op @ A2_rc_op
@@ -1203,55 +1227,126 @@ rc_fom = InstationaryModel(T, x0, operator, rhs,
                            output_functional=C_rc_op)
 ```
 
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Output of the Model
+
 ```{code-cell} ipython3
-rc_output = rc_fom.output(input=1)
+---
+slideshow:
+  slide_type: '-'
+---
+input_train = 'sin(100 * t * t)'
+rc_output = rc_fom.output(input=input_train)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 _ = plt.plot(np.linspace(0, T, nt + 1), rc_output)
 ```
 
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### POD
+
 ```{code-cell} ipython3
-X_rc = rc_fom.solve(input=1)
+---
+slideshow:
+  slide_type: '-'
+---
+X_rc = rc_fom.solve(input=input_train)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 pod_vec, pod_val = pod(X_rc)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 _ = plt.semilogy(range(1, len(pod_val) + 1), pod_val, '.-')
 ```
 
-```{code-cell} ipython3
-from pymor.reductors.basic import InstationaryRBReductor
-```
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Galerkin Projection
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: '-'
+---
+from pymor.reductors.basic import InstationaryRBReductor
+
 rb = InstationaryRBReductor(rc_fom, pod_vec)
 rc_rom = rb.reduce()
 ```
 
 ```{code-cell} ipython3
-rc_rom_output = rc_rom.output(input=1)
+---
+slideshow:
+  slide_type: fragment
+---
+rc_rom
+```
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### POD ROM Output
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: '-'
+---
+rc_rom_output = rc_rom.output(input=input_train)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 _ = plt.plot(np.linspace(0, T, nt + 1), rc_output)
-_ = plt.plot(np.linspace(0, T, nt + 1), rc_rom_output)
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_rom_output, '--')
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 _ = plt.plot(np.linspace(0, T, nt + 1), rc_output - rc_rom_output)
 ```
 
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Output with Test Input
+
 ```{code-cell} ipython3
-test_input = 'sin(100 * t * t)'
-rc_output2 = rc_fom.output(input=test_input)
-rc_rom_output2 = rc_rom.output(input=test_input)
+---
+slideshow:
+  slide_type: '-'
+---
+input_test = 'exp(-t)'
+rc_output2 = rc_fom.output(input=input_test)
+rc_rom_output2 = rc_rom.output(input=input_test)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 _ = plt.plot(np.linspace(0, T, nt + 1), rc_output2)
 _ = plt.plot(np.linspace(0, T, nt + 1), rc_rom_output2)
 ```
@@ -1260,93 +1355,178 @@ _ = plt.plot(np.linspace(0, T, nt + 1), rc_rom_output2)
 _ = plt.plot(np.linspace(0, T, nt + 1), rc_output2 - rc_rom_output2)
 ```
 
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### DEIM
+
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: '-'
+---
+f_X_sol = rc_fom.operator.apply(X_rc)
+```
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
+f_X_sol
+```
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 from pymor.algorithms.ei import deim
+
+interpolation_dofs, collateral_basis, deim_data = deim(f_X_sol)
 ```
 
 ```{code-cell} ipython3
-rc_sol = rc_fom.solve(input=1)
-```
-
-```{code-cell} ipython3
-rc_sol
-```
-
-```{code-cell} ipython3
-f_sol = rc_fom.operator.apply(rc_sol)
-```
-
-```{code-cell} ipython3
-f_sol
-```
-
-```{code-cell} ipython3
-interpolation_dofs, collateral_basis, deim_data = deim(f_sol)
-```
-
-```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 interpolation_dofs
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 sorted(interpolation_dofs)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 collateral_basis
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 deim_data
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 from pymor.operators.ei import EmpiricalInterpolatedOperator
-```
 
-```{code-cell} ipython3
-rc_fom.operator
-```
-
-```{code-cell} ipython3
 ei_ops = [EmpiricalInterpolatedOperator(op, interpolation_dofs, collateral_basis, True)
           for op in rc_fom.operator.operators]
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 from pymor.operators.constructions import LincombOperator
-```
 
-```{code-cell} ipython3
 operator_new = LincombOperator(ei_ops, rc_fom.operator.coefficients)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 rc_fom_ei = rc_fom.with_(operator=operator_new)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 rc_fom_ei
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 rb_ei = InstationaryRBReductor(rc_fom_ei, pod_vec)
 rc_rom_ei = rb_ei.reduce()
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 rc_rom_ei
 ```
 
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### POD-DEIM ROM Output
+
 ```{code-cell} ipython3
-rc_rom_ei_output2 = rc_rom_ei.output(input=test_input)
+---
+slideshow:
+  slide_type: '-'
+---
+rc_rom_ei_output2 = rc_rom_ei.output(input=input_test)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 _ = plt.plot(np.linspace(0, T, nt + 1), rc_output2)
 _ = plt.plot(np.linspace(0, T, nt + 1), rc_rom_ei_output2)
 ```
 
 ```{code-cell} ipython3
 _ = plt.plot(np.linspace(0, T, nt + 1), rc_output2 - rc_rom_ei_output2)
+```
+
++++ {"slideshow": {"slide_type": "subslide"}}
+
+### Linearized Poles
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: '-'
+---
+from pymor.algorithms.to_matrix import to_matrix
+
+matrix = to_matrix(-rc_fom.operator.jacobian(x0))
+spla.eigvals(matrix.toarray()).real.max()
+```
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
+xr0 = rc_rom.solution_space.zeros(1)
+
+matrix = to_matrix(-rc_rom.operator.jacobian(xr0))
+spla.eigvals(matrix).real.max()
+```
+
+```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
+matrix = to_matrix(-rc_rom_ei.operator.jacobian(xr0))
+spla.eigvals(matrix).real.max()
 ```
