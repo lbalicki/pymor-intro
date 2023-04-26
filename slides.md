@@ -1079,3 +1079,143 @@ for p in ps:
     poles = cookie_rom_g.poles(mu=p)
     print(poles.real.max())
 ```
+
++++ {"slideshow": {"slide_type": "slide"}}
+
+## Nonlinear MOR
+
++++
+
+Nonlinear RC example from [MOR Wiki](https://morwiki.mpi-magdeburg.mpg.de/morwiki/index.php/Nonlinear_RC_Ladder) (Model 1).
+
+$$
+\begin{align*}
+  \dot{x}(t) & = A x(t) - g(A_0 x(t)) + g(A_1 x(t)) - g(A_2 x(t)) + B u(t) \\
+  y(t) & = C x(t)
+\end{align*}
+$$
+
+```{code-cell} ipython3
+import scipy.sparse as sps
+from pymor.models.basic import InstationaryModel
+```
+
+```{code-cell} ipython3
+n = 100
+A_rc = sps.diags([(n - 1) * [1], n * [-2], (n - 1) * [1]], [-1, 0, 1], format='csc')
+B_rc = np.zeros((n, 1))
+B_rc[0, 0] = 1
+C_rc = B_rc.T
+```
+
+```{code-cell} ipython3
+A_rc.toarray()
+```
+
+```{code-cell} ipython3
+A0_rc = sps.lil_matrix((n, n))
+A0_rc[0, 0] = 1
+A0_rc = A0_rc.tocsc()
+
+A1_rc = sps.diags([(n - 1) * [1], n * [-1]], [-1, 0], format='lil')
+A1_rc[0, 0] = 0
+A1_rc = A1_rc.tocsc()
+
+A2_rc = sps.diags([n * [1], (n - 1) * [-1]], [0, 1], format='lil')
+A2_rc[-1, -1] = 0
+A2_rc = A2_rc.tocsc()
+```
+
+```{code-cell} ipython3
+A0_rc.toarray()
+```
+
+```{code-cell} ipython3
+A1_rc.toarray()
+```
+
+```{code-cell} ipython3
+A2_rc.toarray()
+```
+
+```{code-cell} ipython3
+g = lambda x: np.exp(40 * x) - 1
+```
+
+```{code-cell} ipython3
+from pymor.operators.interface import Operator
+from pymor.vectorarrays.numpy import NumpyVectorSpace
+
+class ComponentwiseOperator(Operator):
+    def __init__(self, mapping, dim_source=1, dim_range=1, linear=False,
+                 source_id=None, range_id=None, solver_options=None, name=None):
+        self.__auto_init(locals())
+        self.source = NumpyVectorSpace(dim_source, source_id)
+        self.range = NumpyVectorSpace(dim_range, range_id)
+
+    def apply(self, U, mu=None):
+        assert U in self.source
+        assert self.parameters.assert_compatible(mu)
+        return self.range.make_array(self.mapping(U.to_numpy()))
+
+    def restricted(self, dofs):
+        return self.with_(dim_source=len(dofs), dim_range=len(dofs)), dofs
+```
+
+```{code-cell} ipython3
+g_op = ComponentwiseOperator(g, dim_source=n, dim_range=n)
+
+A_rc_op = NumpyMatrixOperator(A_rc)
+A0_rc_op = NumpyMatrixOperator(A0_rc)
+A1_rc_op = NumpyMatrixOperator(A1_rc)
+A2_rc_op = NumpyMatrixOperator(A2_rc)
+B_rc_op = NumpyMatrixOperator(B_rc)
+C_rc_op = NumpyMatrixOperator(C_rc)
+```
+
+```{code-cell} ipython3
+from pymor.operators.constructions import LinearInputOperator
+from pymor.algorithms.timestepping import ExplicitEulerTimeStepper
+```
+
+```{code-cell} ipython3
+T = 1
+x0 = A_rc_op.source.zeros(1)
+operator = -A_rc_op + g_op @ A0_rc_op - g_op @ A1_rc_op + g_op @ A2_rc_op
+rhs = LinearInputOperator(B_rc_op)
+```
+
+```{code-cell} ipython3
+rc_fom = InstationaryModel(T, x0, operator, rhs,
+                           time_stepper=ExplicitEulerTimeStepper(100),
+                           output_functional=C_rc_op)
+```
+
+```{code-cell} ipython3
+rc_output = rc_fom.output(input=1)
+```
+
+```{code-cell} ipython3
+_ = plt.plot(np.linspace(0, T, 101), rc_output)
+```
+
+```{code-cell} ipython3
+X_rc = rc_fom.solve(input=1)
+```
+
+```{code-cell} ipython3
+pod_vec, pod_val = pod(X_rc)
+```
+
+```{code-cell} ipython3
+_ = plt.semilogy(pod_val, '.-')
+```
+
+```{code-cell} ipython3
+from pymor.reductors.basic import InstationaryRBReductor
+```
+
+```{code-cell} ipython3
+rb = InstationaryRBReductor(rc_fom, pod_vec)
+rc_rom = rb.reduce()
+```
