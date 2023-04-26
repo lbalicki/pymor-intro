@@ -39,11 +39,11 @@ rise:
 
 ## How?
 
-+++ {"slideshow": {"slide_type": "slide"}}
++++ {"slideshow": {"slide_type": "subslide"}}
 
 # Why?
 
-+++ {"slideshow": {"slide_type": "subslide"}}
++++ {"slideshow": {"slide_type": "fragment"}}
 
 ## Why FLOSS?
 
@@ -53,7 +53,7 @@ rise:
 1. Why publish FLOSS?
 1. Why contribute to a FLOSS project?
 
-+++ {"slideshow": {"slide_type": "subslide"}}
++++ {"slideshow": {"slide_type": "fragment"}}
 
 ## Why Python?
 
@@ -205,7 +205,7 @@ rise:
 
 ## LTI Models
 
-+++ {"slideshow": {"slide_type": "-"}}
++++ {"slideshow": {"slide_type": "fragment"}}
 
 ### Imports and Settings
 
@@ -217,7 +217,6 @@ slideshow:
 import numpy as np
 import scipy.linalg as spla
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 from pymor.core.logger import set_log_levels
 ```
 
@@ -309,7 +308,7 @@ rail_hsv = rail_fom.hsv()
 ```{code-cell} ipython3
 ---
 slideshow:
-  slide_type: subslide
+  slide_type: fragment
 ---
 fig, ax = plt.subplots()
 _ = ax.semilogy(rail_hsv, '.')
@@ -349,7 +348,7 @@ rail_rom_bt
 ```{code-cell} ipython3
 ---
 slideshow:
-  slide_type: subslide
+  slide_type: fragment
 ---
 rail_rom_bt.A.matrix
 ```
@@ -460,7 +459,7 @@ rail_rom_irka = rail_irka.reduce(20, conv_crit='h2', num_prev=10)
 ```{code-cell} ipython3
 ---
 slideshow:
-  slide_type: subslide
+  slide_type: fragment
 ---
 rail_rom_irka
 ```
@@ -622,7 +621,7 @@ tf_rom = tf_irka.reduce(20)
 ```{code-cell} ipython3
 ---
 slideshow:
-  slide_type: subslide
+  slide_type: fragment
 ---
 tf_rom
 ```
@@ -712,7 +711,7 @@ aaa_rom = aaa.reduce(tol=1e-4)
 ```{code-cell} ipython3
 ---
 slideshow:
-  slide_type: subslide
+  slide_type: fragment
 ---
 aaa_rom
 ```
@@ -888,6 +887,8 @@ for i in range(num_p):
 slideshow:
   slide_type: fragment
 ---
+from matplotlib.colors import LogNorm
+
 fig, ax = plt.subplots()
 out = ax.pcolormesh(ws, ps, Hwp, shading='gouraud', norm=LogNorm())
 ax.set(
@@ -906,6 +907,10 @@ _ = fig.colorbar(out)
 ### Interpolation
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: '-'
+---
 from pymor.algorithms.gram_schmidt import gram_schmidt
 from pymor.reductors.interpolation import LTIBHIReductor
 
@@ -996,6 +1001,10 @@ _ = fig.colorbar(out)
 ### ROM Poles
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: '-'
+---
 for p in ps:
     poles = cookie_rom.poles(mu=p)
     print(poles.real.max())
@@ -1018,10 +1027,18 @@ VW, svals = pod(VW, modes=50)
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 VW
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: fragment
+---
 galerkin = LTIPGReductor(cookie_fom, VW, VW)
 cookie_rom_g = galerkin.reduce()
 ```
@@ -1084,13 +1101,13 @@ for p in ps:
 
 ## Nonlinear MOR
 
-+++
++++ {"slideshow": {"slide_type": "fragment"}}
 
 Nonlinear RC example from [MOR Wiki](https://morwiki.mpi-magdeburg.mpg.de/morwiki/index.php/Nonlinear_RC_Ladder) (Model 1).
 
 $$
 \begin{align*}
-  \dot{x}(t) & = -g(A_0 x(t)) + g(A_1 x(t)) - g(A_2 x(t)) + B u(t) \\
+  \dot{x}(t) & = A x(t) - g(A_0 x(t)) + g(A_1 x(t)) - g(A_2 x(t)) + B u(t) \\
   y(t) & = C x(t)
 \end{align*}
 $$
@@ -1123,6 +1140,8 @@ slideshow:
 ---
 n = 1000
 
+A_rc = 41 * sps.diags([(n - 1) * [1], n * [-2], (n - 1) * [1]], [-1, 0, 1], format='csc')
+
 A0_rc = sps.lil_matrix((n, n))
 A0_rc[0, 0] = 1
 A0_rc = A0_rc.tocsc()
@@ -1146,8 +1165,8 @@ C_rc = B_rc.T
 slideshow:
   slide_type: subslide
 ---
-g = lambda x: np.exp(40 * x) + x - 1
-g_der = lambda x: 40 * np.exp(40 * x) + 1
+g = lambda x: np.exp(40 * x) - 40 * x - 1
+g_der = lambda x: 40 * np.exp(40 * x) - 40
 ```
 
 ```{code-cell} ipython3
@@ -1194,6 +1213,7 @@ slideshow:
   slide_type: subslide
 ---
 g_op = ComponentwiseOperator(g, g_der, dim_source=n, dim_range=n)
+A_rc_op = NumpyMatrixOperator(A_rc)
 A0_rc_op = SparseMatrixOperator(A0_rc)
 A1_rc_op = SparseMatrixOperator(A1_rc)
 A2_rc_op = SparseMatrixOperator(A2_rc)
@@ -1215,9 +1235,11 @@ from pymor.algorithms.timestepping import ExplicitEulerTimeStepper
 slideshow:
   slide_type: fragment
 ---
-T = 1
+T = 2
 x0 = A0_rc_op.source.zeros(1)
-operator = g_op @ A0_rc_op - g_op @ A1_rc_op + g_op @ A2_rc_op
+operator_lin = -A_rc_op
+operator_nonlin = g_op @ A0_rc_op - g_op @ A1_rc_op + g_op @ A2_rc_op
+operator = operator_lin + operator_nonlin
 rhs = LinearInputOperator(B_rc_op)
 nt = 500
 time_stepper = ExplicitEulerTimeStepper(nt)
@@ -1236,7 +1258,7 @@ rc_fom = InstationaryModel(T, x0, operator, rhs,
 slideshow:
   slide_type: '-'
 ---
-input_train = 'sin(100 * t * t)'
+input_train = 1
 rc_output = rc_fom.output(input=input_train)
 ```
 
@@ -1265,7 +1287,7 @@ X_rc = rc_fom.solve(input=input_train)
 slideshow:
   slide_type: fragment
 ---
-pod_vec, pod_val = pod(X_rc)
+pod_vec, pod_val = pod(X_rc, rtol=1e-3)
 ```
 
 ```{code-cell} ipython3
@@ -1348,10 +1370,14 @@ slideshow:
   slide_type: fragment
 ---
 _ = plt.plot(np.linspace(0, T, nt + 1), rc_output2)
-_ = plt.plot(np.linspace(0, T, nt + 1), rc_rom_output2)
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_rom_output2, '--')
 ```
 
 ```{code-cell} ipython3
+---
+slideshow:
+  slide_type: subslide
+---
 _ = plt.plot(np.linspace(0, T, nt + 1), rc_output2 - rc_rom_output2)
 ```
 
@@ -1364,7 +1390,7 @@ _ = plt.plot(np.linspace(0, T, nt + 1), rc_output2 - rc_rom_output2)
 slideshow:
   slide_type: '-'
 ---
-f_X_sol = rc_fom.operator.apply(X_rc)
+f_X_sol = operator_nonlin.apply(X_rc)
 ```
 
 ```{code-cell} ipython3
@@ -1425,7 +1451,7 @@ slideshow:
 from pymor.operators.ei import EmpiricalInterpolatedOperator
 
 ei_ops = [EmpiricalInterpolatedOperator(op, interpolation_dofs, collateral_basis, True)
-          for op in rc_fom.operator.operators]
+          for op in operator_nonlin.operators]
 ```
 
 ```{code-cell} ipython3
@@ -1435,7 +1461,7 @@ slideshow:
 ---
 from pymor.operators.constructions import LincombOperator
 
-operator_new = LincombOperator(ei_ops, rc_fom.operator.coefficients)
+operator_nonlin_ei = LincombOperator(ei_ops, operator_nonlin.coefficients)
 ```
 
 ```{code-cell} ipython3
@@ -1443,6 +1469,7 @@ operator_new = LincombOperator(ei_ops, rc_fom.operator.coefficients)
 slideshow:
   slide_type: fragment
 ---
+operator_new = operator_lin + operator_nonlin_ei
 rc_fom_ei = rc_fom.with_(operator=operator_new)
 ```
 
@@ -1489,44 +1516,42 @@ slideshow:
   slide_type: fragment
 ---
 _ = plt.plot(np.linspace(0, T, nt + 1), rc_output2)
-_ = plt.plot(np.linspace(0, T, nt + 1), rc_rom_ei_output2)
+_ = plt.plot(np.linspace(0, T, nt + 1), rc_rom_ei_output2, '--')
 ```
 
-```{code-cell} ipython3
-_ = plt.plot(np.linspace(0, T, nt + 1), rc_output2 - rc_rom_ei_output2)
-```
++++ {"slideshow": {"slide_type": "slide"}}
+
+# Concluding Remarks
 
 +++ {"slideshow": {"slide_type": "subslide"}}
 
-### Linearized Poles
+# Further MOR Methods
 
-```{code-cell} ipython3
----
-slideshow:
-  slide_type: '-'
----
-from pymor.algorithms.to_matrix import to_matrix
+- second-order systems
+- time-delay systems
+- modal truncation
+- ERA
+- reduced basis methods
+- symplectic methods
+- DMD
+- artificial neural networks
 
-matrix = to_matrix(-rc_fom.operator.jacobian(x0))
-spla.eigvals(matrix.toarray()).real.max()
-```
++++ {"slideshow": {"slide_type": "subslide"}}
 
-```{code-cell} ipython3
----
-slideshow:
-  slide_type: fragment
----
-xr0 = rc_rom.solution_space.zeros(1)
+## Using pyMOR
 
-matrix = to_matrix(-rc_rom.operator.jacobian(xr0))
-spla.eigvals(matrix).real.max()
-```
+- installation: https://github.com/pymor/pymor#readme
+- documentation: https://docs.pymor.org
+- GitHub issues: https://github.com/pymor/pymor/issues
+- GitHub discussions: https://github.com/pymor/pymor/discussions
+- pyMOR community meetings: https://github.com/pymor/pymor/discussions/categories/announcements
+- pyMOR School: https://school.pymor.org
 
-```{code-cell} ipython3
----
-slideshow:
-  slide_type: fragment
----
-matrix = to_matrix(-rc_rom_ei.operator.jacobian(xr0))
-spla.eigvals(matrix).real.max()
-```
++++ {"slideshow": {"slide_type": "subslide"}}
+
+## Contributing to pyMOR
+
+- developer documentation: https://docs.pymor.org/latest/developer_docs.html
+- get attribution via `AUTHORS.md`
+- become contributor with push access to feature branches
+- become main developer with full control over the project
