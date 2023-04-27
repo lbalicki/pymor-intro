@@ -40,7 +40,7 @@
 # ## How?
 
 # %% [markdown] slideshow={"slide_type": "subslide"}
-# Why?
+# # Why?
 
 # %% [markdown] slideshow={"slide_type": "fragment"}
 # ## Why FLOSS?
@@ -83,7 +83,7 @@
 # 2. Why should I use pyMOR?
 
 # %% [markdown] slideshow={"slide_type": "slide"}
-# What?
+# # What?
 
 # %% [markdown] slideshow={"slide_type": "subslide"}
 # ## What is pyMOR?
@@ -183,7 +183,7 @@
 # </table>
 
 # %% [markdown] slideshow={"slide_type": "slide"}
-# How?
+# # How?
 
 # %% [markdown] slideshow={"slide_type": "subslide"}
 # ## LTI Models
