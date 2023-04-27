@@ -543,8 +543,10 @@ for i in range(num_p):
 # %% slideshow={"slide_type": "fragment"}
 from matplotlib.colors import LogNorm
 
+lognorm = LogNorm(vmin=9e-11, vmax=2)
+
 fig, ax = plt.subplots()
-out = ax.pcolormesh(ws, ps, Hwp, shading='gouraud', norm=LogNorm())
+out = ax.pcolormesh(ws, ps, Hwp, shading='gouraud', norm=lognorm)
 ax.set(
     xscale='log',
     yscale='log',
@@ -601,7 +603,7 @@ for i in range(num_p):
 
 # %% slideshow={"slide_type": "fragment"}
 fig, ax = plt.subplots()
-out = ax.pcolormesh(ws, ps, Hwp_err, shading='gouraud', norm=LogNorm())
+out = ax.pcolormesh(ws, ps, Hwp_err, shading='gouraud', norm=lognorm)
 ax.set(
     xscale='log',
     yscale='log',
@@ -628,7 +630,7 @@ from pymor.algorithms.pod import pod
 
 VW = V.copy()
 VW.append(W)
-VW, svals = pod(VW, modes=50)
+VW, svals = pod(VW)
 
 # %% slideshow={"slide_type": "fragment"}
 VW
@@ -650,7 +652,7 @@ for i in range(num_p):
 
 # %% slideshow={"slide_type": "fragment"}
 fig, ax = plt.subplots()
-out = ax.pcolormesh(ws, ps, Hwp_err2, shading='gouraud', norm=LogNorm())
+out = ax.pcolormesh(ws, ps, Hwp_err2, shading='gouraud', norm=lognorm)
 ax.set(
     xscale='log',
     yscale='log',
