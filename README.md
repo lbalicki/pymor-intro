@@ -4,7 +4,7 @@
 
 ## Installation
 
-Tested using Python 3.8.
+Tested using Python 3.10.
 
 ```bash
 python -m venv .venv
