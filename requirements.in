@@ -1,4 +1,5 @@
-jupytext
-matplotlib
-pymor==2022.2.1
-rise
+pymor==2024.1.2
+ipympl
+ipywidgets
+jupyterlab-mathjax3
+notebook
